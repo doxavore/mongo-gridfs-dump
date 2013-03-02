@@ -120,7 +120,8 @@ module MongoGridFSDump
 
     def notify_dumped(count, total)
       if status_every && (count % status_every) == 0
-        logger.info "Dumped #{count}/#{total} files so far..."
+        pct = (count / total.to_f) * 100
+        logger.info "Dumped #{count}/#{total} files... (#{pct.round(2)}%)"
       end
     end
   end
