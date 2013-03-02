@@ -1,0 +1,70 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require_relative '../lib/mongo_gridfs_dump'
+
+options = {}
+
+parser = OptionParser.new do |opts|
+  opts.on "-s", "--source MONGOURL", "Source MongoDB connection URL" do |arg|
+    options[:source] = arg
+  end
+
+  opts.on "-d", "--destination FILE_PATH", "Destination folder for the tree" do |arg|
+    options[:destination] = arg
+  end
+
+  opts.on "-p", "--prefix FS_PREFIX", "GridFS collection prefix (default: fs)" do |arg|
+    options[:prefix] = arg
+  end
+
+  opts.on "--status COUNT", Integer, "Output status every COUNT files" do |arg|
+    options[:status_every] = arg
+  end
+
+  opts.on "-v", "--verbose", "Include debugging output" do
+    options[:verbose] = true
+  end
+end
+
+parser.banner = "mongo-gridfs-dump [options]"
+
+parser.on_tail "-h", "--help", "Show help" do
+  puts parser
+  exit 1
+end
+
+parser.parse(ARGV)
+options[:prefix] ||= "fs"
+
+[:source, :destination].each do |required|
+  unless options.key?(required)
+    puts parser
+    puts ""
+    puts "Connection URLs can be given in the format:"
+    puts "  mongodb://[username:password@]host[:port]/database"
+    puts "For example, a local connection without authentication:"
+    puts "  mongodb://localhost:27017/test"
+    puts ""
+    puts "ERROR: --#{required} is a required argument."
+    exit 1
+  end
+end
+
+if options[:verbose]
+  MongoGridFSDump.logger.level = Logger::DEBUG
+end
+
+dumper = MongoGridFSDump::Dumper.new(options.delete(:source),
+                                     options.delete(:destination),
+                                     options.delete(:prefix),
+                                     options)
+
+trap("INT") do
+  MongoGridFSDump.logger.fatal "GridFS dump has been terminated!"
+  exit 0
+end
+
+dumper.dump
+
+# vim: set ft=ruby:
