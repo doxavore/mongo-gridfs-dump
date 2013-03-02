@@ -61,6 +61,7 @@ dumper = MongoGridFSDump::Dumper.new(options.delete(:source),
                                      options)
 
 trap("INT") do
+  dumper.delete_last_file!
   MongoGridFSDump.logger.fatal "GridFS dump has been terminated!"
   exit 0
 end

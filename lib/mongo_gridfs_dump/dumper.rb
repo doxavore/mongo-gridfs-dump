@@ -19,6 +19,13 @@ module MongoGridFSDump
       @status_every = options[:status_every]
     end
 
+    def delete_last_file!
+      return if open_file_path.nil? || File.exist?(open_file_path)
+
+      File.delete(open_file_path)
+      logger.info "Deleted possible partial at #{open_file_path}"
+    end
+
     def dump
       pre_dump_file_count = dest_resolver.count_files
       pre_dump_grid_count = source_resolver.count_files
@@ -74,6 +81,7 @@ module MongoGridFSDump
 
     attr_reader :dest_resolver,
                 :grid,
+                :open_file_path,
                 :source_db,
                 :source_resolver,
                 :status_every
@@ -87,6 +95,7 @@ module MongoGridFSDump
       local_md5 = Digest::MD5.new
 
       begin
+        @open_file_path = dump_path
         File.open dump_path, 'wb' do |dump_io|
           grid_file.each do |chunk|
             dump_io.write chunk
@@ -105,6 +114,8 @@ module MongoGridFSDump
         File.delete(dump_path) rescue nil
         raise
       end
+
+      @open_file_path = nil
     end
 
     def notify_dumped(count, total)
