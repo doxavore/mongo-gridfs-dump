@@ -6,8 +6,10 @@ module MongoGridFSDump
       @prefix = prefix
     end
 
-    def count_files
+    def count_files(include_very_recent = false)
       total = files.count
+      return total if include_very_recent
+
       # Throw out the ones we wouldn't dump
       files.find({}, {fields: ['_id']}).sort({'_id' => -1}).each do |doc|
         if doc && doc['_id'] && should_dump_id?(doc['_id'])
@@ -17,6 +19,15 @@ module MongoGridFSDump
         end
       end
       total
+    end
+
+    def each_grid_id(start_grid_id, ascending = true)
+      start_grid_id = ensure_bson_id(start_grid_id)
+
+      while grid_id = next_grid_id(start_grid_id, ascending)
+        yield grid_id
+        start_grid_id = grid_id
+      end
     end
 
     def ensure_bson_id(id)
@@ -41,6 +52,20 @@ module MongoGridFSDump
       doc ? doc['_id'] : nil
     end
 
+    def server_md5(grid_id)
+      grid_id = ensure_bson_id(grid_id)
+
+      md5_command = BSON::OrderedHash.new
+      md5_command['filemd5'] = grid_id
+      md5_command['root'] = prefix
+
+      server_md5 = files.db.command(md5_command)['md5']
+    end
+
+    private
+
+    attr_reader :files, :prefix
+
     def next_grid_id(prev_id, ascending = true)
       prev_id = ensure_bson_id(prev_id)
 
@@ -63,20 +88,6 @@ module MongoGridFSDump
 
       nil
     end
-
-    def server_md5(grid_id)
-      grid_id = ensure_bson_id(grid_id)
-
-      md5_command = BSON::OrderedHash.new
-      md5_command['filemd5'] = grid_id
-      md5_command['root'] = prefix
-
-      server_md5 = files.db.command(md5_command)['md5']
-    end
-
-    private
-
-    attr_reader :files, :prefix
 
     def should_dump_id?(grid_id)
       # Only return if not created in the last 60 seconds,

@@ -38,13 +38,11 @@ module MongoGridFSDump
       last_dumped_id = dest_resolver.find_last_dumped_grid_id
       logger.debug "Last dumped GridID: #{last_dumped_id}"
 
-      while next_id = source_resolver.next_grid_id(last_dumped_id)
+      source_resolver.each_grid_id(last_dumped_id) do |next_id|
         next if dest_resolver.file_exists_for_grid_id?(next_id)
         dump_grid_id(next_id)
 
         dump_count += 1
-        last_dumped_id = next_id
-
         notify_dumped(dump_count, pre_dump_grid_count - pre_dump_file_count)
       end
 
@@ -58,8 +56,7 @@ module MongoGridFSDump
         # until we make up the difference
         logger.info "Attempting to find #{difference} missing file system files..."
 
-        last_dumped_id = nil
-        while next_id = source_resolver.next_grid_id(last_dumped_id, false)
+        source_resolver.each_grid_id(nil, false) do |next_id|
           unless dest_resolver.file_exists_for_grid_id?(next_id)
             dump_grid_id(next_id)
             dump_count += 1
@@ -68,7 +65,6 @@ module MongoGridFSDump
             notify_dumped(dump_count, post_dump_grid_count - post_dump_file_count)
           end
 
-          last_dumped_id = next_id
           break if difference <= 0
         end
 
@@ -80,6 +76,30 @@ module MongoGridFSDump
       logger.info "Dumped #{dump_count} files in this run"
       logger.info "Post-dump total GridFS files: #{post_dump_grid_count}"
       logger.info "Post-dump total dumped files: #{post_dump_file_count}"
+    end
+
+    def verify
+      logger.info "MongoDB GridFS Dump verifying md5 checksums against GridFS"
+
+      file_count = dest_resolver.count_files
+      verified_count = 0
+      logger.info "Verifying #{file_count} dumped files..."
+
+      dest_resolver.each_grid_id(nil) do |grid_id|
+        file_path = dest_resolver.file_path_for_grid_id(grid_id)
+        file_md5 = Digest::MD5.file(file_path).hexdigest
+
+        server_md5 = source_resolver.server_md5(grid_id)
+
+        if file_md5 != server_md5
+          logger.warn "MD5 checksums do not match for GridFS##{grid_id}: local=#{file_md5}, server=#{server_md5}"
+        end
+
+        verified_count += 1
+        notify_verified(verified_count, file_count)
+      end
+
+      logger.info "Completed verification of #{verified_count} files in this run"
     end
 
     private
@@ -126,6 +146,13 @@ module MongoGridFSDump
       if status_every && (count % status_every) == 0
         pct = (count / total.to_f) * 100
         logger.info "Dumped #{count}/#{total} files... (#{pct.round(2)}%)"
+      end
+    end
+
+    def notify_verified(count, total)
+      if status_every && (count % status_every) == 0
+        pct = (count / total.to_f) * 100
+        logger.info "Verified #{count}/#{total} files... (#{pct.round(2)}%)"
       end
     end
   end

@@ -58,7 +58,7 @@ module MongoGridFSDump
       logger.info "Completed initial file restore. Checking file counts..."
 
       post_restore_file_count = pre_restore_file_count # should not change here
-      post_restore_grid_count = dest_resolver.count_files
+      post_restore_grid_count = dest_resolver.count_files(true)
       difference = post_restore_file_count - post_restore_grid_count
       if difference > 0
         # It seems we are missing some files, so try working our way backwards
@@ -89,6 +89,35 @@ module MongoGridFSDump
       logger.info "Post-restore total restored files: #{post_restore_file_count}"
     end
 
+    def verify
+      logger.info "MongoDB GridFS Restore verifying md5 checksums against file system"
+
+      grid_count = dest_resolver.count_files
+      verified_count = 0
+      logger.info "Verifying #{grid_count} GridFS files..."
+
+      dest_resolver.each_grid_id(nil) do |grid_id|
+        file_path = source_resolver.file_path_for_grid_id(grid_id)
+
+        unless File.exist? file_path
+          logger.debug "GridFS file missing from file system: #{grid_id}"
+          next # skip to the next one
+        end
+
+        file_md5 = Digest::MD5.file(file_path).hexdigest
+        server_md5 = dest_resolver.server_md5(grid_id)
+
+        if file_md5 != server_md5
+          logger.warn "MD5 checksums do not match for GridFS##{grid_id}: local=#{file_md5}, server=#{server_md5}"
+        end
+
+        verified_count += 1
+        notify_verified(verified_count, grid_count)
+      end
+
+      logger.info "Completed verification of #{verified_count} files in this run"
+    end
+
     private
 
     attr_reader :dest_resolver,
@@ -100,6 +129,13 @@ module MongoGridFSDump
       if status_every && (count % status_every) == 0
         pct = (count / total.to_f) * 100
         logger.info "Restored #{count}/#{total} files... (#{pct.round(2)}%)"
+      end
+    end
+
+    def notify_verified(count, total)
+      if status_every && (count % status_every) == 0
+        pct = (count / total.to_f) * 100
+        logger.info "Verified #{count}/#{total} files... (#{pct.round(2)}%)"
       end
     end
 

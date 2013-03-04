@@ -25,6 +25,10 @@ parser = OptionParser.new do |opts|
   opts.on "-v", "--verbose", "Include debugging output" do
     options[:verbose] = true
   end
+
+  opts.on "--verify-only", "Don't restore files, only verify MD5s of existing files" do
+    options[:verify_only] = true
+  end
 end
 
 parser.banner = "mongo-gridfs-restore [options]"
@@ -65,6 +69,10 @@ trap("INT") do
   exit 0
 end
 
-restorer.restore
+if options[:verify_only]
+  restorer.verify
+else
+  restorer.restore
+end
 
 # vim: set ft=ruby:

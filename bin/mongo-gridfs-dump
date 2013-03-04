@@ -25,6 +25,10 @@ parser = OptionParser.new do |opts|
   opts.on "-v", "--verbose", "Include debugging output" do
     options[:verbose] = true
   end
+
+  opts.on "--verify-only", "Don't dump files, only verify MD5s of existing files" do
+    options[:verify_only] = true
+  end
 end
 
 parser.banner = "mongo-gridfs-dump [options]"
@@ -61,11 +65,15 @@ dumper = MongoGridFSDump::Dumper.new(options.delete(:source),
                                      options)
 
 trap("INT") do
-  dumper.delete_last_file!
+  dumper.delete_last_file! unless options[:verify_only]
   MongoGridFSDump.logger.fatal "GridFS dump has been terminated!"
   exit 0
 end
 
-dumper.dump
+if options[:verify_only]
+  dumper.verify
+else
+  dumper.dump
+end
 
 # vim: set ft=ruby:
