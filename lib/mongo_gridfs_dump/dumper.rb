@@ -77,8 +77,8 @@ module MongoGridFSDump
       end
 
       logger.info "Dumped #{dump_count} files in this run"
-      logger.info "Post-dump total GridFS files: #{source_resolver.count_files}"
-      logger.info "Post-dump total dumped files: #{dest_resolver.count_files}"
+      logger.info "Post-dump total GridFS files: #{post_dump_grid_count}"
+      logger.info "Post-dump total dumped files: #{post_dump_file_count}"
     end
 
     private
