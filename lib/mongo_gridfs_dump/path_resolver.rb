@@ -7,11 +7,16 @@ module MongoGridFSDump
     end
 
     def count_files
-      find_directories(root_path).inject(0) { |total, dir|
-        total + find_directories(dir).inject(0) { |subtotal, subdir|
-          subtotal + find_files(subdir).count
+      if can_quick_count?
+        `find #{root_path} -type f -print | wc -l`.strip.to_i
+      else
+        logger.debug "Program 'find' is not in PATH; falling back to slower directory globbing..."
+        find_directories(root_path).inject(0) { |total, dir|
+          total + find_directories(dir).inject(0) { |subtotal, subdir|
+            subtotal + find_files(subdir).count
+          }
         }
-      }
+      end
     end
 
     def directory_for_grid_id(grid_id)
@@ -47,6 +52,13 @@ module MongoGridFSDump
       end
 
       nil
+    end
+
+    private
+
+    def can_quick_count?
+      system("which find > /dev/null 2>&1") &&
+        system("which wc > /dev/null 2>&1")
     end
 
     def find_directories(path)

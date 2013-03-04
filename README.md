@@ -13,6 +13,10 @@ with an `_id` of `4f8c973fcc9b365022000005` would be created at
 you dump to file system that can handle a large directory tree. XFS seems
 to work well for our purposes.
 
+*NOTE:* To speed up file count checks, this program expects your output
+directory to ONLY contain dumped files. If it contains other files,
+the counts will never match up.
+
 Warning
 -------
 This project was created to scratch an itch, and is not of the highest quality.

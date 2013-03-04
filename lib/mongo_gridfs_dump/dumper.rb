@@ -27,6 +27,8 @@ module MongoGridFSDump
     end
 
     def dump
+      logger.info "MongoDB GridFS Dump counting files in GridFS and on the file system..."
+
       pre_dump_file_count = dest_resolver.count_files
       pre_dump_grid_count = source_resolver.count_files
       logger.info "Pre-dump total GridFS files: #{pre_dump_grid_count}"
