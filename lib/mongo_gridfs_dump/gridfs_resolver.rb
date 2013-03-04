@@ -19,6 +19,28 @@ module MongoGridFSDump
       total
     end
 
+    def ensure_bson_id(id)
+      case id
+      when BSON::ObjectId
+        id
+      when String
+        BSON::ObjectId.from_string(id)
+      when nil
+        nil
+      else
+        raise ArgumentError, "Don't know how to convert #{id.class} to BSON::ObjectId"
+      end
+    end
+
+    def file_exists_for_grid_id?(grid_id)
+      !files.find({_id: ensure_bson_id(grid_id)}).limit(1).first.nil?
+    end
+
+    def find_last_restored_grid_id
+      doc = files.find({}, {fields: ['_id']}).sort({'_id' => -1}).limit(1).first
+      doc ? doc['_id'] : nil
+    end
+
     def next_grid_id(prev_id, ascending = true)
       prev_id = ensure_bson_id(prev_id)
 
@@ -55,19 +77,6 @@ module MongoGridFSDump
     private
 
     attr_reader :files, :prefix
-
-    def ensure_bson_id(id)
-      case id
-      when BSON::ObjectId
-        id
-      when String
-        BSON::ObjectId.from_string(id)
-      when nil
-        nil
-      else
-        raise ArgumentError, "Don't know how to convert #{id.class} to BSON::ObjectId"
-      end
-    end
 
     def should_dump_id?(grid_id)
       # Only return if not created in the last 60 seconds,

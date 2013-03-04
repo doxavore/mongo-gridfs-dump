@@ -20,7 +20,7 @@ module MongoGridFSDump
     end
 
     def delete_last_file!
-      return if open_file_path.nil? || File.exist?(open_file_path)
+      return if open_file_path.nil? || !File.exist?(open_file_path)
 
       File.delete(open_file_path)
       logger.info "Deleted possible partial at #{open_file_path}"
@@ -39,6 +39,7 @@ module MongoGridFSDump
       logger.debug "Last dumped GridID: #{last_dumped_id}"
 
       while next_id = source_resolver.next_grid_id(last_dumped_id)
+        next if dest_resolver.file_exists_for_grid_id?(next_id)
         dump_grid_id(next_id)
 
         dump_count += 1
@@ -64,7 +65,7 @@ module MongoGridFSDump
             dump_count += 1
             difference -= 1
 
-            notify_dumped(dump_count, pre_dump_grid_count - pre_dump_file_count)
+            notify_dumped(dump_count, post_dump_grid_count - post_dump_file_count)
           end
 
           last_dumped_id = next_id
@@ -86,7 +87,6 @@ module MongoGridFSDump
     attr_reader :dest_resolver,
                 :grid,
                 :open_file_path,
-                :source_db,
                 :source_resolver,
                 :status_every
 

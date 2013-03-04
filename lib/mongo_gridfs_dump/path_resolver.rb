@@ -28,6 +28,28 @@ module MongoGridFSDump
                 grid_id[2,2])
     end
 
+    def each_grid_id(start_grid_id)
+      start_grid_id = start_grid_id.to_s if start_grid_id
+
+      find_directories(root_path).each do |dir|
+        dir_name = File.basename(dir)
+        next if start_grid_id && start_grid_id[0,2] > dir_name
+
+        find_directories(dir).each do |subdir|
+          subdir_name = File.basename(dir)
+          next if start_grid_id && start_grid_id[2,2] > subdir_name
+
+          find_files(subdir).each do |file|
+            grid_id = File.basename(file)
+            next if start_grid_id && start_grid_id > grid_id
+
+            yield grid_id 
+          end
+        end
+      end
+      nil
+    end
+
     def file_exists_for_grid_id?(grid_id)
       File.exist? file_path_for_grid_id(grid_id)
     end
@@ -41,11 +63,11 @@ module MongoGridFSDump
       dirs = find_directories root_path
       return nil if dirs.empty?
 
-      dirs.each do |dir|
+      dirs.reverse.each do |dir|
         subdirs = find_directories dir
         next if subdirs.empty?
 
-        subdirs.each do |subdir|
+        subdirs.reverse.each do |subdir|
           files = find_files subdir
           return File.basename(files.first) unless files.empty?
         end
@@ -64,13 +86,13 @@ module MongoGridFSDump
     def find_directories(path)
       Dir.glob(File.join(path, "*")).select { |fp|
         File.directory? fp
-      }.reverse
+      }.sort!
     end
 
     def find_files(path)
       Dir.glob(File.join(path, "*")).select { |fp|
         File.file? fp
-      }.reverse
+      }.sort!
     end
   end
 end
