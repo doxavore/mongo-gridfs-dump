@@ -47,6 +47,8 @@ module MongoGridFSDump
         notify_dumped(dump_count, pre_dump_grid_count - pre_dump_file_count)
       end
 
+      logger.info "Completed initial file dump. Checking file counts..."
+
       post_dump_file_count = dest_resolver.count_files
       post_dump_grid_count = source_resolver.count_files
       difference = post_dump_grid_count - post_dump_file_count
