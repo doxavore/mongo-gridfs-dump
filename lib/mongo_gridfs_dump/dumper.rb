@@ -10,7 +10,8 @@ module MongoGridFSDump
       @prefix = prefix
 
       source_conn = Mongo::Connection.from_uri(source)
-      @source_db = source_conn[source.split('/').last]
+      # source_conn.db is always 'test' with Mongo 1.8.3...
+      @source_db = source_conn[source.split('/').last.split('?').first]
       @grid = Mongo::Grid.new(@source_db, @prefix)
 
       @dest_resolver = PathResolver.new(dest)

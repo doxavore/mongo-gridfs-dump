@@ -1,3 +1,3 @@
 source 'http://rubygems.org'
 
-gem 'mongo', '~> 1.7.0'
+gem 'mongo', '~> 1.7'
