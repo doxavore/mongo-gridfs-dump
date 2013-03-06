@@ -42,14 +42,14 @@ module MongoGridFSDump
       logger.info "Pre-restore total GridFS files: #{pre_restore_grid_count}"
 
       restore_count = 0
+      restore_bytes = 0
       last_restored_id = dest_resolver.find_last_restored_grid_id
       logger.debug "Last restored GridID: #{last_restored_id || '(none)'}"
 
       source_resolver.each_grid_id(last_restored_id) do |next_id|
         next if dest_resolver.file_exists_for_grid_id?(next_id)
 
-        restore_grid_id(next_id)
-
+        restore_bytes += restore_grid_id(next_id)
         restore_count += 1
 
         notify_restored(restore_count, pre_restore_file_count - pre_restore_grid_count)
@@ -68,8 +68,7 @@ module MongoGridFSDump
         # Run again, but start from the beginning this time
         source_resolver.each_grid_id(nil) do |next_id|
           unless dest_resolver.file_exists_for_grid_id?(next_id)
-            restore_grid_id(next_id)
-
+            restore_bytes += restore_grid_id(next_id)
             restore_count += 1
             difference -= 1
 
@@ -84,7 +83,7 @@ module MongoGridFSDump
         end
       end
 
-      logger.info "Restored #{restore_count} files in this run"
+      logger.info "Restored #{restore_count} files totalling #{number_to_human_size restore_bytes} in this run"
       logger.info "Post-restore total GridFS files: #{post_restore_grid_count}"
       logger.info "Post-restore total restored files: #{post_restore_file_count}"
     end
@@ -156,6 +155,7 @@ module MongoGridFSDump
       File.open file_path, 'rb' do |file|
         grid.put(file, opts)
       end
+      File.size(file_path)
     end
   end
 end

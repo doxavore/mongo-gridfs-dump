@@ -36,14 +36,16 @@ module MongoGridFSDump
       logger.info "Pre-dump total dumped files: #{pre_dump_file_count}"
 
       dump_count = 0
+      dump_bytes = 0
       last_dumped_id = dest_resolver.find_last_dumped_grid_id
       logger.debug "Last dumped GridID: #{last_dumped_id}"
 
       source_resolver.each_grid_id(last_dumped_id) do |next_id|
         next if dest_resolver.file_exists_for_grid_id?(next_id)
-        dump_grid_id(next_id)
 
+        dump_bytes += dump_grid_id(next_id)
         dump_count += 1
+
         notify_dumped(dump_count, pre_dump_grid_count - pre_dump_file_count)
       end
 
@@ -59,7 +61,7 @@ module MongoGridFSDump
 
         source_resolver.each_grid_id(nil, false) do |next_id|
           unless dest_resolver.file_exists_for_grid_id?(next_id)
-            dump_grid_id(next_id)
+            dump_bytes += dump_grid_id(next_id)
             dump_count += 1
             difference -= 1
 
@@ -74,7 +76,7 @@ module MongoGridFSDump
         end
       end
 
-      logger.info "Dumped #{dump_count} files in this run"
+      logger.info "Dumped #{dump_count} files totalling #{number_to_human_size dump_bytes} in this run"
       logger.info "Post-dump total GridFS files: #{post_dump_grid_count}"
       logger.info "Post-dump total dumped files: #{post_dump_file_count}"
     end
@@ -141,6 +143,7 @@ module MongoGridFSDump
       end
 
       @open_file_path = nil
+      File.size(dump_path)
     end
 
     def notify_dumped(count, total)
